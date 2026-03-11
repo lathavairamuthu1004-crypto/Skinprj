@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+motor
+pydantic
+passlib[bcrypt]
+python-multipart
+python-dotenv
+jwt
+python-jose[cryptography]
+pydantic-settings
+bcrypt
+pillow
+numpy
+scikit-learn
+torch
+torchvision
