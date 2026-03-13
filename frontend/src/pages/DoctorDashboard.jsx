@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, FileText, ClipboardList, Send, CheckCircle, Search, Calendar, UserCheck } from 'lucide-react';
+import { Users, FileText, ClipboardList, Send, CheckCircle, Search, Calendar, UserCheck, FileDown } from 'lucide-react';
 import { doctorApi } from '../api';
 
 const DoctorDashboard = () => {
@@ -40,6 +40,109 @@ const DoctorDashboard = () => {
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const downloadReport = (report) => {
+        const printWindow = window.open('', '_blank');
+        const date = new Date(report.timestamp).toLocaleString();
+        
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Skin Analysis Report - ${report.patient_name}</title>
+                    <style>
+                        body { font-family: 'Inter', sans-serif; color: #1e293b; padding: 40px; line-height: 1.6; }
+                        .header { border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+                        .logo { font-size: 24px; font-weight: bold; color: #2563eb; }
+                        .report-info { text-align: right; font-size: 12px; color: #64748b; }
+                        .section { margin-bottom: 30px; }
+                        .section-title { font-size: 14px; font-weight: bold; text-transform: uppercase; color: #64748b; margin-bottom: 10px; border-left: 4px solid #2563eb; padding-left: 10px; }
+                        .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; }
+                        .image-container { width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+                        .image-container img { width: 100%; height: auto; display: block; }
+                        .result-card { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+                        .disease-name { font-size: 24px; font-weight: bold; color: #0f172a; margin: 0; }
+                        .severity { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-top: 5px; }
+                        .severity-High { background: #fee2e2; color: #ef4444; }
+                        .severity-Medium { background: #fef3c7; color: #d97706; }
+                        .severity-Low { background: #dcfce7; color: #10b981; }
+                        .feature-grid { display: grid; grid-template-cols: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+                        .feature-item { background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
+                        .feature-label { font-size: 9px; text-transform: uppercase; color: #94a3b8; font-weight: bold; }
+                        .feature-value { font-size: 13px; font-weight: bold; color: #334155; }
+                        .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="logo">Clinician Portal | SkinMorph</div>
+                        <div class="report-info">
+                            <div>Patient: ${report.patient_name}</div>
+                            <div>Report ID: ${report._id}</div>
+                            <div>Analysis Date: ${date}</div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="grid">
+                            <div>
+                                <div class="section-title">Case Information</div>
+                                <div class="result-card">
+                                    <div style="font-size: 12px; color: #64748b;">AI Classification</div>
+                                    <h1 class="disease-name">${report.analysis.disease_name}</h1>
+                                    <div class="severity severity-${report.analysis.severity}">${report.analysis.severity} Priority</div>
+                                    <p style="margin-top: 15px; font-size: 14px; color: #475569;">${report.analysis.description}</p>
+                                    <div style="margin-top: 15px; font-size: 13px;">
+                                        <strong>Confidence:</strong> ${(report.analysis.confidence * 100).toFixed(1)}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="image-container">
+                                <div class="section-title">Clinical Entry Image</div>
+                                <img src="${report.image_data}" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid">
+                        <div class="section">
+                            <div class="section-title">AI Support Data</div>
+                            <div class="result-card">
+                                <p><strong>Recommendation:</strong><br/>${report.analysis.recommendation}</p>
+                                <div class="feature-grid">
+                                    ${report.analysis.features ? Object.entries(report.analysis.features).map(([k, v]) => `
+                                        <div class="feature-item">
+                                            <div class="feature-label">${k.replace('_', ' ')}</div>
+                                            <div class="feature-value">${v}</div>
+                                        </div>
+                                    `).join('') : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="section">
+                            <div class="section-title">Dermatologist Assessments</div>
+                            ${report.reviews && report.reviews.length > 0 ? report.reviews.map(rev => `
+                                <div class="result-card" style="margin-bottom: 10px; border-left: 4px solid #10b981;">
+                                    <p style="margin: 0; font-size: 14px;">${rev.content}</p>
+                                    <div style="font-size: 11px; color: #10b981; font-weight: bold; margin-top: 10px;">
+                                        Dr. ${rev.doctor_name} &bull; ${new Date(rev.timestamp).toLocaleString()}
+                                    </div>
+                                </div>
+                            `).join('') : '<div class="result-card"><p style="color: #94a3b8; font-style: italic;">No clinical assessments provided yet.</p></div>'}
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        Confidential Medical Record - For Professional Use Only. Generated via SkinMorph AI Clinical Systems.
+                    </div>
+                    
+                    <script>
+                        window.onload = () => { setTimeout(() => { window.print(); }, 500); };
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     };
 
     return (
@@ -97,7 +200,14 @@ const DoctorDashboard = () => {
                                 className="glass-card p-8 border-secondary/20"
                             >
                                 <div className="flex justify-between items-start mb-8">
-                                    <div className="flex gap-6">
+                                    <div className="flex gap-4">
+                                        <button
+                                            onClick={() => downloadReport(selectedReport)}
+                                            className="p-3 bg-secondary/10 text-secondary rounded-xl hover:bg-secondary/20 transition-all flex items-center justify-center"
+                                            title="Download Clinical Report"
+                                        >
+                                            <FileDown className="w-6 h-6" />
+                                        </button>
                                         <img src={selectedReport.image_data} className="w-32 h-32 object-cover rounded-2xl border-2 border-secondary/20" alt="Scan" />
                                         <div>
                                             <h2 className="text-3xl font-bold mb-1">{selectedReport.patient_name}</h2>

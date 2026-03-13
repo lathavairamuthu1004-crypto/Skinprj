@@ -24,6 +24,7 @@ export const authApi = {
 export const patientApi = {
     analyze: (imageData) => api.post('/patient/analyze', { image: imageData }),
     getReports: () => api.get('/patient/reports'),
+    deleteReport: (reportId) => api.delete(`/patient/reports/${reportId}`),
 };
 
 export const doctorApi = {

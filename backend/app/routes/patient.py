@@ -44,3 +44,21 @@ async def get_patient_reports(current_user: dict = Depends(get_current_user)):
         doc["_id"] = str(doc["_id"])
         reports.append(doc)
     return reports
+@router.delete("/reports/{report_id}")
+async def delete_report(report_id: str, current_user: dict = Depends(get_current_user)):
+    from bson import ObjectId
+    if current_user["role"] != "patient":
+        raise HTTPException(status_code=403, detail="Only patients can delete their reports")
+    
+    try:
+        result = await db.reports.delete_one({
+            "_id": ObjectId(report_id),
+            "patient_id": str(current_user["_id"])
+        })
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Report not found or unauthorized")
+            
+        return {"message": "Report deleted successfully"}
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid report ID")

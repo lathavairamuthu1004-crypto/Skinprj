@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, History, Upload, CheckCircle2, AlertCircle, Info, MessageSquare, Clock, ShieldCheck } from 'lucide-react';
+import { Camera, History, Upload, CheckCircle2, AlertCircle, Info, MessageSquare, Clock, ShieldCheck, Trash2, FileDown } from 'lucide-react';
 import { patientApi } from '../api';
 
 const PatientDashboard = () => {
@@ -23,6 +23,131 @@ const PatientDashboard = () => {
         } catch (err) {
             console.error("Failed to fetch reports");
         }
+    };
+
+    const handleDelete = async (reportId) => {
+        if (window.confirm("Are you sure you want to delete this scan from your history?")) {
+            try {
+                await patientApi.deleteReport(reportId);
+                fetchReports();
+            } catch (err) {
+                alert("Failed to delete report. Please try again.");
+            }
+        }
+    };
+
+    const downloadReport = (report) => {
+        const printWindow = window.open('', '_blank');
+        const date = new Date(report.timestamp).toLocaleString();
+        
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Skin Analysis Report - ${report.analysis.disease_name}</title>
+                    <style>
+                        body { font-family: 'Inter', sans-serif; color: #1e293b; padding: 40px; line-height: 1.6; }
+                        .header { border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+                        .logo { font-size: 24px; font-weight: bold; color: #3b82f6; }
+                        .report-info { text-align: right; font-size: 12px; color: #64748b; }
+                        .section { margin-bottom: 30px; }
+                        .section-title { font-size: 14px; font-weight: bold; text-transform: uppercase; color: #64748b; margin-bottom: 10px; border-left: 4px solid #3b82f6; padding-left: 10px; }
+                        .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; }
+                        .image-container { width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+                        .image-container img { width: 100%; height: auto; display: block; }
+                        .result-card { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+                        .disease-name { font-size: 28px; font-weight: bold; color: #0f172a; margin: 0; }
+                        .severity { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; margin-top: 5px; }
+                        .severity-High { background: #fee2e2; color: #ef4444; }
+                        .severity-Medium { background: #fef3c7; color: #d97706; }
+                        .severity-Low { background: #dcfce7; color: #10b981; }
+                        .feature-grid { display: grid; grid-template-cols: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+                        .feature-item { background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
+                        .feature-label { font-size: 9px; text-transform: uppercase; color: #94a3b8; font-weight: bold; }
+                        .feature-value { font-size: 14px; font-weight: bold; color: #334155; }
+                        .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
+                        @media print { .no-print { display: none; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="logo">SkinMorph AI</div>
+                        <div class="report-info">
+                            <div>Report ID: ${report._id}</div>
+                            <div>Date: ${date}</div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="grid">
+                            <div>
+                                <div class="section-title">Analysis Result</div>
+                                <div class="result-card">
+                                    <h1 class="disease-name">${report.analysis.disease_name}</h1>
+                                    <div class="severity severity-${report.analysis.severity}">${report.analysis.severity} Risk Assessment</div>
+                                    <p style="margin-top: 15px; font-size: 14px; color: #475569;">${report.analysis.description}</p>
+                                    <div style="margin-top: 20px;">
+                                        <strong>Confidence Score:</strong> ${(report.analysis.confidence * 100).toFixed(1)}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="image-container">
+                                <div class="section-title">Skin Image Preview</div>
+                                <img src="${report.image_data}" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid">
+                        <div class="section">
+                            <div class="section-title">Recommendations</div>
+                            <div class="result-card" style="border-color: #3b82f633;">
+                                <p><strong>Primary Recommendation:</strong><br/>${report.analysis.recommendation}</p>
+                                ${report.analysis.suggestions ? `<p style="margin-top: 15px;"><strong>Care Suggestions:</strong><br/>${report.analysis.suggestions}</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="section">
+                            <div class="section-title">Clinical Features</div>
+                            <div class="feature-grid">
+                                ${report.analysis.features ? Object.entries(report.analysis.features).map(([k, v]) => `
+                                    <div class="feature-item">
+                                        <div class="feature-label">${k.replace('_', ' ')}</div>
+                                        <div class="feature-value">${v}</div>
+                                    </div>
+                                `).join('') : '<p>Automated features not available for this session.</p>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    ${report.reviews && report.reviews.length > 0 ? `
+                        <div class="section">
+                            <div class="section-title">Clinical Assessments (Dermatologist Feedback)</div>
+                            ${report.reviews.map(rev => `
+                                <div class="result-card" style="margin-bottom: 10px; border-left: 4px solid #10b981;">
+                                    <p style="margin: 0 0 10px 0;">${rev.content}</p>
+                                    <div style="font-size: 12px; color: #10b981; font-weight: bold;">
+                                        Dr. ${rev.doctor_name} &bull; ${new Date(rev.timestamp).toLocaleDateString()}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <div class="footer">
+                        Disclaimer: This AI-generated report is for information purposes only and does not constitute a definitive medical diagnosis. Always consult with a qualified medical professional for clinical decisions.
+                    </div>
+                    
+                    <script>
+                        window.onload = () => {
+                            setTimeout(() => {
+                                window.print();
+                                // Optional: window.close(); 
+                            }, 500);
+                        };
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     };
 
     const handleImageChange = (e) => {
@@ -168,9 +293,27 @@ const PatientDashboard = () => {
                                                     Scanned on {new Date(report.timestamp).toLocaleDateString()}
                                                 </p>
                                             </div>
-                                            <div className="text-right">
-                                                <div className="text-xs text-slate-500 uppercase font-bold">Confidence</div>
-                                                <div className="text-2xl font-mono text-primary">{(report.analysis.confidence * 100).toFixed(1)}%</div>
+                                            <div className="text-right flex flex-col items-end gap-2">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => downloadReport(report)}
+                                                        className="p-2 text-slate-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                                        title="Download Report (PDF)"
+                                                    >
+                                                        <FileDown className="w-5 h-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(report._id)}
+                                                        className="p-2 text-slate-600 hover:text-accent hover:bg-accent/10 rounded-lg transition-all"
+                                                        title="Delete Report"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                                <div>
+                                                    <div className="text-xs text-slate-500 uppercase font-bold">Confidence</div>
+                                                    <div className="text-2xl font-mono text-primary">{(report.analysis.confidence * 100).toFixed(1)}%</div>
+                                                </div>
                                             </div>
                                         </div>
 
