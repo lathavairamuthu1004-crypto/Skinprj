@@ -134,10 +134,108 @@ def predict_pil(
         probs = torch.softmax(logits, dim=1).squeeze(0).cpu().numpy().astype(np.float64)
 
     top_idx = int(np.argmax(probs))
-    pred = classes[top_idx]
+    pred = str(classes[top_idx])
     conf = float(probs[top_idx])
-    topk = sorted([(classes[i], float(probs[i])) for i in range(len(classes))], key=lambda t: t[1], reverse=True)[:5]
+    # Clarify list slicing for linter
+    sorted_probs = sorted([(str(classes[i]), float(probs[i])) for i in range(len(classes))], key=lambda t: t[1], reverse=True)
+    topk = sorted_probs[:5]
     return pred, conf, topk
+
+
+def generate_gradcam(
+    model,
+    classes: List[str],
+    image: Image.Image,
+    target_layer_name: str = "layer4",
+    device: str = "cpu",
+) -> Optional[str]:
+    """Generates a Grad-CAM heatmap base64 string."""
+    torch = _lazy_torch()
+    import torch.nn.functional as F
+    import base64
+    import io
+
+    # Hooks for activations and gradients
+    activations = []
+    gradients = []
+
+    def get_activations(module, input, output):
+        activations.append(output)
+
+    def get_gradients(module, grad_input, grad_output):
+        gradients.append(grad_output[0])
+
+    # Find target layer
+    target_layer = None
+    for name, module in model.named_modules():
+        if name == target_layer_name:
+            target_layer = module
+            break
+    
+    if target_layer is None:
+        return None
+
+    # Register hooks
+    handle_act = target_layer.register_forward_hook(get_activations)
+    handle_grad = target_layer.register_full_backward_hook(get_gradients)
+
+    try:
+        model.eval()
+        model.to(device)
+        tfm = build_transforms(train=False)
+        x = tfm(image).unsqueeze(0).to(device)
+        x.requires_grad = True
+
+        logits = model(x)
+        top_idx = torch.argmax(logits, dim=1)
+        
+        # Zero gradients and backprop
+        model.zero_grad()
+        logits[0, top_idx].backward()
+
+        # Generate heatmap
+        grads = gradients[0]
+        acts = activations[0]
+        
+        weights = torch.mean(grads, dim=(2, 3), keepdim=True)
+        cam = torch.sum(weights * acts, dim=1).squeeze(0)
+        cam = F.relu(cam)
+        
+        # Normalize
+        cam_min, cam_max = cam.min(), cam.max()
+        cam = (cam - cam_min) / (cam_max - cam_min + 1e-8)
+        cam = cam.cpu().detach().numpy()
+
+        # Resize heatmap and overlay
+        heatmap = Image.fromarray((cam * 255).astype(np.uint8)).resize(image.size, resample=Image.BILINEAR)
+        
+        # Create a colored version using a custom palette (magma-like)
+        heatmap_colored = Image.new("RGB", heatmap.size)
+        pixels = heatmap.load()
+        colored_pixels = heatmap_colored.load()
+        for y in range(heatmap.size[1]):
+            for x_p in range(heatmap.size[0]):
+                v = pixels[x_p, y]
+                # Simple color mapping: blue -> red
+                r_c = int(255 * (v / 255.0))
+                b_c = int(255 * (1.0 - v / 255.0))
+                g_c = int(128 * (1.0 - abs(v - 128) / 128.0))
+                colored_pixels[x_p, y] = (r_c, g_c, b_c)
+
+        # Blend with original
+        blended = Image.blend(image.convert("RGB"), heatmap_colored, alpha=0.5)
+        
+        # To Base64
+        buffered = io.BytesIO()
+        blended.save(buffered, format="JPEG")
+        return "data:image/jpeg;base64," + base64.b64encode(buffered.getvalue()).decode()
+
+    except Exception as e:
+        print(f"Grad-CAM Error: {e}")
+        return None
+    finally:
+        handle_act.remove()
+        handle_grad.remove()
 
 
 def artifacts_exist(artifacts: ModelArtifacts) -> bool:

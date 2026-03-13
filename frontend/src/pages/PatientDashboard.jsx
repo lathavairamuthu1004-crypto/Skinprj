@@ -140,8 +140,17 @@ const PatientDashboard = () => {
                         ) : (
                             reports.map((report) => (
                                 <div key={report._id} className="glass-card overflow-hidden grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
-                                    <div className="aspect-square rounded-xl overflow-hidden border border-white/5">
-                                        <img src={report.image_data} className="w-full h-full object-cover" alt="Scan" />
+                                    <div className="space-y-4">
+                                        <div className="aspect-square rounded-xl overflow-hidden border border-white/5">
+                                            <div className="text-[10px] uppercase font-bold text-slate-500 mb-1 px-2">Original Image</div>
+                                            <img src={report.image_data} className="w-full h-full object-cover" alt="Scan" />
+                                        </div>
+                                        {report.analysis.heatmap && (
+                                            <div className="aspect-square rounded-xl overflow-hidden border border-primary/20 bg-primary/5">
+                                                <div className="text-[10px] uppercase font-bold text-primary mb-1 px-2">AI Focus Map (Grad-CAM)</div>
+                                                <img src={report.analysis.heatmap} className="w-full h-full object-cover" alt="Heatmap" />
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="md:col-span-3 space-y-4">
                                         <div className="flex justify-between items-start">
@@ -170,10 +179,19 @@ const PatientDashboard = () => {
                                                 <Info className="w-4 h-4 text-primary mt-1 shrink-0" />
                                                 <p className="text-sm text-slate-300 italic">"{report.analysis.description}"</p>
                                             </div>
-                                            <div className="flex items-start gap-2">
+                                            <div className="flex items-start gap-2 mb-2">
                                                 <CheckCircle2 className="w-4 h-4 text-primary mt-1 shrink-0" />
                                                 <p className="text-sm font-medium text-slate-200">{report.analysis.recommendation}</p>
                                             </div>
+                                            {report.analysis.suggestions && (
+                                                <div className="flex items-start gap-2 mt-2 pt-2 border-t border-white/10">
+                                                    <AlertCircle className="w-4 h-4 text-amber-500 mt-1 shrink-0" />
+                                                    <p className="text-sm font-medium text-slate-200">
+                                                        <span className="text-slate-500 font-bold uppercase text-[10px] mr-2">Care Suggestions</span>
+                                                        {report.analysis.suggestions}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {report.analysis.features && (

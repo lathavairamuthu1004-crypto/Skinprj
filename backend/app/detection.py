@@ -14,6 +14,7 @@ from ml.skin_classifier import (
     load_weights,
     predict_pil,
     build_model,
+    generate_gradcam,
 )
 
 class SkinDetectionEngine:
@@ -107,7 +108,7 @@ class SkinDetectionEngine:
             else:
                 # Assign based on group logic
                 is_red = any(disease in self.visual_groups.get(gn, []) for gn in ["RED_INFLAMED", "SCALY_ROUGH"])
-                full_prototypes[disease] = default_prototypes["DEFAULT_RED" if is_red else "DEFAULT_DARK"]
+                full_prototypes[str(disease)] = default_prototypes["DEFAULT_RED" if is_red else "DEFAULT_DARK"]
         
         return full_prototypes
 
@@ -125,7 +126,7 @@ class SkinDetectionEngine:
         roughness = np.clip(np.std(gray[1:,1:] - gray[:-1,:-1]) / 50.0, 0, 1)
         
         # 3. Spot Density (Already 0-1)
-        peaks = np.where(red_dominance > (np.mean(red_dominance) + 0.2), 1, 0)
+        peaks = np.where(red_index > (np.mean(red_index) + 0.2), 1, 0)
         spot_density = np.clip(np.sum(peaks) / (img_array.shape[0] * img_array.shape[1]) / 0.5, 0, 1)
         
         # 4. Darkness (Normalized 0-1)
@@ -141,16 +142,19 @@ class SkinDetectionEngine:
             if self._ensure_dl_loaded():
                 img = load_image_from_base64(image_base64)
                 pred, conf, topk = predict_pil(self._dl_model, self._dl_classes, img, device=self._best_device())
+                heatmap_b64 = generate_gradcam(self._dl_model, self._dl_classes, img, device=self._best_device())
                 conf = float(conf)
                 info = DISEASES_INFO.get(pred, {"description": "", "severity": "N/A", "recommendation": ""})
 
                 return {
                     "disease_name": pred,
-                    "confidence": round(conf, 4),
+                    "confidence": float(round(float(conf), 4)),
                     "description": info.get("description", ""),
                     "severity": info.get("severity", "N/A"),
                     "recommendation": info.get("recommendation", ""),
-                    "topk": [{"disease_name": n, "confidence": round(float(p), 4)} for n, p in topk],
+                    "suggestions": info.get("suggestions", ""),
+                    "heatmap": heatmap_b64,
+                    "topk": [{"disease_name": n, "confidence": float(round(float(p), 4))} for n, p in topk],
                     "model": "cnn_resnet18",
                 }
 
@@ -196,10 +200,12 @@ class SkinDetectionEngine:
             
             return {
                 "disease_name": best_disease,
-                "confidence": round(confidence, 4),
+                "confidence": float(round(float(confidence), 4)),
                 "description": info["description"],
                 "severity": info["severity"],
                 "recommendation": info["recommendation"],
+                "suggestions": info.get("suggestions", ""),
+                "heatmap": None,
                 "features": {
                     "redness": round(features[0], 3),
                     "roughness": round(features[1], 3),
@@ -217,7 +223,8 @@ class SkinDetectionEngine:
                 "confidence": 0.0,
                 "description": str(e),
                 "severity": "N/A",
-                "recommendation": "Try a clearer image."
+                "recommendation": "Try a clearer image.",
+                "suggestions": "Ensure the lighting is good and the skin area is in focus."
             }
 
     def train_on_data(self, image_path, true_label):
@@ -235,8 +242,9 @@ class SkinDetectionEngine:
                 # Online Learning: Moving average update (Alpha = 0.2)
                 alpha = 0.2
                 current_proto = np.array(self.prototypes[true_label])
-                new_proto = (1 - alpha) * current_proto + alpha * np.array(features)
-                self.prototypes[true_label] = new_proto.tolist()
+                # Ensure the result of arithmetic is treated as a numpy array
+                new_proto = (1.0 - alpha) * current_proto + alpha * np.array(features, dtype=float)
+                self.prototypes[true_label] = np.array(new_proto).tolist()
                 
                 # Save 'trained' state
                 with open(self.model_path, "w") as f:

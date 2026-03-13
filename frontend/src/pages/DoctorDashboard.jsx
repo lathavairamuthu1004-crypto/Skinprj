@@ -127,7 +127,13 @@ const DoctorDashboard = () => {
                                         <h4 className="text-sm font-bold uppercase text-slate-500 mb-3 flex items-center gap-2">
                                             <ClipboardList className="w-4 h-4" /> Recommended Action
                                         </h4>
-                                        <p className="text-slate-200">{selectedReport.analysis.recommendation}</p>
+                                        <p className="text-slate-200 mb-3">{selectedReport.analysis.recommendation}</p>
+                                        {selectedReport.analysis.suggestions && (
+                                            <div className="pt-3 border-t border-white/5">
+                                                <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">AI Care Suggestions</p>
+                                                <p className="text-sm text-slate-400 font-medium">{selectedReport.analysis.suggestions}</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
