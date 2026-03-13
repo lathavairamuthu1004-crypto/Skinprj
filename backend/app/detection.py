@@ -24,10 +24,10 @@ class SkinDetectionEngine:
         self._dl_model = None
         self._dl_classes = None
         self.visual_groups = {
-            "RED_INFLAMED": ["Acne Vulgaris", "Rosacea", "Eczema (Atopic Dermatitis)", "Impetigo", "Urticaria (Hives)", "Contact Dermatitis"],
-            "PIGMENTED_DARK": ["Melanoma", "Seborrheic Keratosis", "Melasma", "Dermatofibroma", "Basal Cell Carcinoma"],
-            "SCALY_ROUGH": ["Actinic Keratosis", "Psoriasis", "Lichen Planus", "Tinea Corporis (Ringworm)"],
-            "NODULAR_VIRAL": ["Viral Warts", "Molluscum Contagiosum", "Herpes Simplex", "Herpes Zoster (Shingles)"],
+            "RED_INFLAMED": ["Acne Vulgaris", "Rosacea", "Eczema (Atopic Dermatitis)", "Impetigo", "Urticaria (Hives)", "Contact Dermatitis", "Candidiasis"],
+            "PIGMENTED_DARK": ["Melanoma", "Seborrheic Keratosis", "Melasma", "Dermatofibroma", "Basal Cell Carcinoma", "Benign Nevus"],
+            "SCALY_ROUGH": ["Actinic Keratosis", "Psoriasis", "Lichen Planus", "Tinea Corporis (Ringworm)", "Scabies"],
+            "NODULAR_VIRAL": ["Viral Warts", "Molluscum Contagiosum", "Herpes Simplex", "Herpes Zoster (Shingles)", "Varicella (Chickenpox)"],
             "CHRONIC_SEVERE": ["Squamous Cell Carcinoma", "Bullous Pemphigoid", "Vitiligo", "Alopecia Areata"]
         }
         # Initialize or load "trained" prototypes
@@ -80,6 +80,21 @@ class SkinDetectionEngine:
             "Basal Cell Carcinoma": [0.25, 0.35, 0.15, 0.5, 0.45],
             "Squamous Cell Carcinoma": [0.35, 0.45, 0.15, 0.6, 0.55],
             "Tinea Corporis (Ringworm)": [0.4, 0.25, 0.1, 0.3, 0.3],
+            "Benign Nevus": [0.1, 0.1, 0.0, 0.5, 0.1],
+            "Impetigo": [0.45, 0.4, 0.3, 0.2, 0.5],
+            "Herpes Simplex": [0.4, 0.2, 0.5, 0.2, 0.4],
+            "Varicella (Chickenpox)": [0.4, 0.1, 0.8, 0.2, 0.3],
+            "Urticaria (Hives)": [0.6, 0.1, 0.2, 0.2, 0.3],
+            "Melasma": [0.15, 0.1, 0.0, 0.45, 0.2],
+            "Lichen Planus": [0.4, 0.3, 0.1, 0.4, 0.4],
+            "Molluscum Contagiosum": [0.2, 0.2, 0.3, 0.2, 0.2],
+            "Candidiasis": [0.5, 0.2, 0.1, 0.2, 0.3],
+            "Scabies": [0.4, 0.3, 0.4, 0.2, 0.4],
+            "Herpes Zoster (Shingles)": [0.5, 0.3, 0.6, 0.3, 0.5],
+            "Alopecia Areata": [0.05, 0.05, 0.0, 0.1, 0.05],
+            "Contact Dermatitis": [0.5, 0.2, 0.1, 0.2, 0.4],
+            "Bullous Pemphigoid": [0.4, 0.2, 0.2, 0.3, 0.6],
+            "Dermatofibroma": [0.2, 0.3, 0.05, 0.4, 0.3],
             # Fallback for others - averaged by group
             "DEFAULT_RED": [0.4, 0.2, 0.2, 0.2, 0.3],
             "DEFAULT_DARK": [0.1, 0.3, 0.1, 0.7, 0.3]
@@ -91,7 +106,7 @@ class SkinDetectionEngine:
                 full_prototypes[disease] = default_prototypes[disease]
             else:
                 # Assign based on group logic
-                is_red = any(disease in group for group in ["RED_INFLAMED", "SCALY_ROUGH"])
+                is_red = any(disease in self.visual_groups.get(gn, []) for gn in ["RED_INFLAMED", "SCALY_ROUGH"])
                 full_prototypes[disease] = default_prototypes["DEFAULT_RED" if is_red else "DEFAULT_DARK"]
         
         return full_prototypes

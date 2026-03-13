@@ -18,7 +18,8 @@ async def test_engine():
         ("d:/Downloads/acne.jpg", "Acne Vulgaris"),
         ("d:/Downloads/eczema.jpg", "Eczema (Atopic Dermatitis)"),
         ("d:/Downloads/melanoma.jpg", "Melanoma"),
-        ("d:/Downloads/psoriasis.jpg", "Psoriasis")
+        ("d:/Downloads/psoriasis.jpg", "Psoriasis"),
+        ("d:/Downloads/rosacea.jpg", "Rosacea")
     ]
     
     print("\n--- TESTING DEEP LEARNING MODEL (NEWLY TRAINED) ---")

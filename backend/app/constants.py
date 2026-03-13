@@ -133,5 +133,10 @@ DISEASES_INFO = {
         "description": "Firm, harmless red-to-brown bumps that are commonly found on the legs.",
         "severity": "Low",
         "recommendation": "Harmless; no treatment needed unless biopsy is required for confirmation."
+    },
+    "Vascular Lesion": {
+        "description": "Common skin growths that are made up of blood vessels, such as cherry angiomas or hemangiomas.",
+        "severity": "Low",
+        "recommendation": "Usually benign, but should be examined if they bleed or grow rapidly."
     }
 }

@@ -1,8 +1,12 @@
 {
   "classes": [
     "Acne Vulgaris",
+    "Actinic Keratosis",
+    "Benign Nevus",
+    "Dermatofibroma",
     "Eczema (Atopic Dermatitis)",
     "Melanoma",
-    "Psoriasis"
+    "Rosacea",
+    "Squamous Cell Carcinoma"
   ]
 }

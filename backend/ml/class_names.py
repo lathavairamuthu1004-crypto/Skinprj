@@ -23,9 +23,28 @@ def _default_aliases() -> Dict[str, str]:
         _norm("melanoma"): "Melanoma",
         _norm("melanoma suspect"): "Melanoma",
         _norm("melanoma_suspect"): "Melanoma",
+        _norm("mel"): "Melanoma",
         _norm("benign nevus"): "Benign Nevus",
         _norm("benign_nevus"): "Benign Nevus",
         _norm("nevus"): "Benign Nevus",
+        _norm("nv"): "Benign Nevus",
+        _norm("basal cell carcinoma"): "Basal Cell Carcinoma",
+        _norm("bcc"): "Basal Cell Carcinoma",
+        _norm("squamous cell carcinoma"): "Squamous Cell Carcinoma",
+        _norm("scc"): "Squamous Cell Carcinoma",
+        _norm("actinic keratosis"): "Actinic Keratosis",
+        _norm("ak"): "Actinic Keratosis",
+        _norm("akiec"): "Actinic Keratosis",
+        _norm("bkl"): "Seborrheic Keratosis",
+        _norm("df"): "Dermatofibroma",
+        _norm("vasc"): "Urticaria (Hives)", # Closest fit for vascular lesions in this list
+        _norm("ringworm"): "Tinea Corporis (Ringworm)",
+        _norm("tinea"): "Tinea Corporis (Ringworm)",
+        _norm("shingles"): "Herpes Zoster (Shingles)",
+        _norm("chickenpox"): "Varicella (Chickenpox)",
+        _norm("hives"): "Urticaria (Hives)",
+        _norm("wart"): "Viral Warts",
+        _norm("warts"): "Viral Warts",
     }
 
 
